@@ -12,10 +12,31 @@ function getCandles(from::DateTime, to::DateTime, instrument::String)
 end
 
 println("Loading candle data...")
-cdata = getCandles(Dates.now() - Dates.Hour(1), Dates.now(), "USD_CAD")
+cdata = getCandles(Dates.now() - Dates.Hour(2), Dates.now(), "USD_CAD")
 
 println("Loading events CSV...")
-events = readcsv("events.csv")
+events = readcsv("julia/fix/events.csv")
 
-evdate = events[2, 3]
-DateTime(evdate)
+events[4]
+# A type to store the event data
+type Event
+  title::String
+  impact::Int
+  time::DateTime
+  country::String
+end
+
+# An array of events
+forexevents = Array(Event, int(length(events) / 4))
+
+map((rawevent) -> 10, forexevents)
+
+Event("Bool", Dates.now(), 1, "f")
+
+for i = events
+  forexevents[i] = Event(events[i]["title"])
+end
+
+function getEventDelta(e::Event)
+  e[1]
+end
