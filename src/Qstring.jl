@@ -1,5 +1,4 @@
-using HttpCommon
-using Dates
+using HttpCommon, Base.Dates
 
 # Creating a query string that will encode unix datetimes
 # given Julia DateTimes
