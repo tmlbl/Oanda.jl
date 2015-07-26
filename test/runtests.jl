@@ -14,13 +14,14 @@ end_time = Dates.now() - Dates.Minute(5)
 c = candles(start_time, end_time, "EUR_USD")
 
 facts("Parses the candles") do
+  @fact typeof(c) => Oanda.Candles
   @fact typeof(c.series[1].closeAsk) => Float64
   @fact typeof(c.series[1].time) => Int64
 end
 
 facts("Saves candles to the database") do
   save_candles(c)
-  cans = getrange("EUR_USD", "M1", start_time, end_time)
+  cans = get_candles("EUR_USD", "M1", start_time, end_time)
   println(cans.series)
   @fact typeof(cans) => Oanda.Candles
   for c in cans.series

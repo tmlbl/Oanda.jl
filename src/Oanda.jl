@@ -7,7 +7,7 @@ using Requests,
 export past,
        last,
        save_candles,
-       getrange,
+       get_candles,
        qstring,
        candles
 

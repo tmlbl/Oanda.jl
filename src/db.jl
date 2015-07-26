@@ -21,7 +21,7 @@ function unpack_candle(data::Array{Uint8})
   Candle(parsedfields...)
 end
 
-function getrange(symbol::String, granularity::String, from::DateTime, to::DateTime)
+function get_candles(symbol::String, granularity::String, from::DateTime, to::DateTime)
   r = db_range(db, join([symbol, granularity], '|'))
   series = Candle[]
   start_time = Int(Dates.datetime2unix(from))
@@ -29,8 +29,7 @@ function getrange(symbol::String, granularity::String, from::DateTime, to::DateT
   for c in r
     t = parse(split(c[1], '|')[3])
     if t >= start_time && t <= end_time
-      can = unpack_candle(c[2])
-      push!(series, can)
+      push!(series, unpack_candle(c[2]))
     end
   end
   Candles(symbol, granularity, series)
