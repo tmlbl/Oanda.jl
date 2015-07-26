@@ -12,6 +12,7 @@ end_time = Dates.now() - Dates.Minute(5)
 
 # Fetch some historical data
 c = candles(start_time, end_time, "EUR_USD")
+println(c.series[1])
 
 facts("Parses the candles") do
   @fact typeof(c.series[1].closeAsk) => Float64
@@ -20,5 +21,7 @@ end
 
 facts("Saves candles to the database") do
   save_candles(c)
-  getrange("EUR_USD", "M1", start_time, end_time)
+  cans = getrange("EUR_USD", "M1", start_time, end_time)
+  # println(cans.series[1])
+  @fact length(cans.series) => length(c.series)
 end
