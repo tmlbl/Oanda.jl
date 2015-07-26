@@ -9,7 +9,3 @@ function qstring(kv::Tuple...)
   q = string("?", join(map(encodepair, kv)))
   q[1:length(q) - 1]
 end
-
-# Let's test it!
-@assert qstring(("a", "b"), ("c", "d")) == "?a=b&c=d"
-@assert qstring(("date", Dates.unix2datetime(1424888079))) == "?date=1424888079"

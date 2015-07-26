@@ -6,7 +6,9 @@ using Requests,
 
 export past,
        last,
-       serialize,
+       save_candles,
+       getrange,
+       qstring,
        candles
 
 include("Qstring.jl")
