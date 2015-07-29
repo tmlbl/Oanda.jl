@@ -7,9 +7,9 @@ db = open_db("/tmp/oanda_dev", true)
 
 function save_candles(candles::Candles)
   batch = create_write_batch()
-  for c in candles.series
-    val = join(map((x) -> c.(x), fieldnames(c)), "|")
-    key = join([candles.symbol, candles.granularity, c.time], "|")
+  for i in candles.series
+    val = join(i[2], '|')
+    key = join([candles.symbol, candles.granularity, string(i[1])], '|')
     batch_put(batch, key, val, length(val))
   end
   write_batch(db, batch)
@@ -23,14 +23,36 @@ end
 
 function get_candles(symbol::String, granularity::String, from::DateTime, to::DateTime)
   r = db_range(db, join([symbol, granularity], '|'))
-  series = Candle[]
-  start_time = Int(Dates.datetime2unix(from))
-  end_time = Int(Dates.datetime2unix(to))
+
+  timestamps = Array{DateTime,1}()
+  colnames = ASCIIString["openBid", "openAsk", "closeBid", "closeAsk",
+    "highBid", "highAsk", "lowBid", "lowAsk"]
+  vals = Any[]
+
   for c in r
-    t = parse(split(c[1], '|')[3])
-    if t >= start_time && t <= end_time
-      push!(series, unpack_candle(c[2]))
+    t = DateTime(split(c[1], '|')[3])
+    if t >= from && t <= to
+      push!(timestamps, t)
+      fields = split(bytestring(c[2]), '|')
+      push!(vals, map(parse, fields))
     end
   end
+
+  values = zeros(length(vals),8)
+  println(length(values))
+
+  for i in eachindex(vals)
+    values[i,1] = vals[i][1]
+    values[i,2] = vals[i][2]
+    values[i,3] = vals[i][3]
+    values[i,4] = vals[i][4]
+    values[i,5] = vals[i][5]
+    values[i,6] = vals[i][6]
+    values[i,7] = vals[i][7]
+    values[i,8] = vals[i][8]
+  end
+
+  series = TimeArray(timestamps, values, colnames)
+  @show series
   Candles(symbol, granularity, series)
 end
