@@ -4,6 +4,7 @@ using HttpCommon, Base.Dates
 # given Julia DateTimes
 function qstring(kv::Tuple...)
   encodeval(v::String) = encodeURI(v)
+  encodeval(s::Symbol) = encodeval(string(s))
   encodeval(dt::DateTime) = string(round(Int64, Dates.datetime2unix(dt)))
   encodepair(p::Tuple) = string(encodeval(p[1]), "=", encodeval(p[2]), "&")
   q = string("?", join(map(encodepair, kv)))

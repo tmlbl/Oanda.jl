@@ -21,8 +21,8 @@ function unpack_candle(data::Array{Uint8})
   Candle(parsedfields...)
 end
 
-function get_candles(symbol::String, granularity::String, from::DateTime, to::DateTime)
-  r = db_range(db, join([symbol, granularity], '|'))
+function db_candles(instrument::Symbol, granularity::Symbol, from::DateTime, to::DateTime)
+  r = db_range(db, join(map(string,[instrument, granularity]), '|'))
 
   timestamps = Array{DateTime,1}()
   colnames = ASCIIString["openBid", "openAsk", "closeBid", "closeAsk",
@@ -39,7 +39,6 @@ function get_candles(symbol::String, granularity::String, from::DateTime, to::Da
   end
 
   values = zeros(length(vals),8)
-  println(length(values))
 
   for i in eachindex(vals)
     values[i,1] = vals[i][1]
@@ -53,6 +52,5 @@ function get_candles(symbol::String, granularity::String, from::DateTime, to::Da
   end
 
   series = TimeArray(timestamps, values, colnames)
-  @show series
-  Candles(symbol, granularity, series)
+  Candles(instrument, granularity, series)
 end

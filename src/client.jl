@@ -19,7 +19,7 @@ function oa_request(resource::String, params::Tuple{String,Any}...)
   res
 end
 
-function candles(from::DateTime, to::DateTime, instrument::String; granularity="M1")
+function oa_candles(instrument::Symbol, granularity::Symbol, from::DateTime, to::DateTime)
 
   res = oa_request("candles", ("start", from), ("end", to),
     ("instrument", instrument), ("granularity", granularity))
