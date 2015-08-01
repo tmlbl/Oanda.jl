@@ -11,7 +11,7 @@ end
 function oa_request(resource::String, params::Tuple{String,Any}...)
   query = qstring(params...)
   uri = string(baseuri, "candles", query)
-  println(uri)
+  # println(uri)
   res = get(uri, headers = defheaders)
   if res.status != 200
     oa_err(res)
@@ -19,10 +19,10 @@ function oa_request(resource::String, params::Tuple{String,Any}...)
   res
 end
 
-function oa_candles(instrument::Symbol, granularity::Symbol, from::DateTime, to::DateTime)
-
+function oa_series(inst::Symbol, gran::Symbol, from::DateTime, to::DateTime)
+  println("Requesting candles from $from to $to")
   res = oa_request("candles", ("start", from), ("end", to),
-    ("instrument", instrument), ("granularity", granularity))
+    ("instrument", inst), ("granularity", gran))
 
   candle_data = JSON.parse(res.data)["candles"]
 
@@ -47,6 +47,39 @@ function oa_candles(instrument::Symbol, granularity::Symbol, from::DateTime, to:
     values[i,8] = c["lowAsk"]
   end
 
-  series = TimeArray(timestamps, values, colnames)
-  Candles(instrument, granularity, series)
+  TimeArray(timestamps, values, colnames)
+end
+
+roundup(f::Float64) = floor(f) < f ? floor(f + 1) : floor(f)
+
+function combine(t1::TimeArray, t2::TimeArray)
+  values = vcat(t1.values, t2.values)
+  timestamps = vcat(t1.timestamp, t2.timestamp)
+  TimeArray(timestamps, values, t1.colnames)
+end
+
+function oa_candles(inst::Symbol, gran::Symbol, from::DateTime, to::DateTime)
+  g = granularities[gran]
+  to = round(to)
+  from = round(from)
+  numcandles = Int(to - from) / toms(g)
+  println("There should be $numcandles $gran candles from $from to $to")
+  # If there are more than 5000 we need to request them in batches
+  reqs = roundup(numcandles / 5000)
+  println("We need to make $reqs request(s)")
+
+  if reqs == 1
+    series = oa_series(inst, gran, from, to)
+  else
+    interval = (to - from) / reqs
+    println("interval $interval g $g")
+    series = oa_series(inst, gran, from, from + interval)
+    cur_time = from + interval + g
+    for i = 2:reqs
+      series = combine(series, oa_series(inst, gran, cur_time, cur_time + interval))
+      cur_time += interval + g
+    end
+  end
+
+  Candles(inst, gran, series)
 end

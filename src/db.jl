@@ -3,7 +3,7 @@
 
 using LevelDB
 
-db = open_db("/tmp/oanda_dev", true)
+db = open_db(joinpath(ENV["HOME"], ".oanda"), true)
 
 function save_candles(candles::Candles)
   batch = create_write_batch()
@@ -22,7 +22,9 @@ function unpack_candle(data::Array{Uint8})
 end
 
 function db_candles(instrument::Symbol, granularity::Symbol, from::DateTime, to::DateTime)
-  r = db_range(db, join(map(string,[instrument, granularity]), '|'))
+  from = round(from)
+  r = db_range(db, join(map(string,[instrument, granularity, from]), '|'))
+  to = round(to)
 
   timestamps = Array{DateTime,1}()
   colnames = ASCIIString["openBid", "openAsk", "closeBid", "closeAsk",
@@ -35,6 +37,8 @@ function db_candles(instrument::Symbol, granularity::Symbol, from::DateTime, to:
       push!(timestamps, t)
       fields = split(bytestring(c[2]), '|')
       push!(vals, map(parse, fields))
+    else
+      break
     end
   end
 
