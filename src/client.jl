@@ -12,7 +12,7 @@ end
 
 function oa_request(resource::String, params::Tuple{String,Any}...)
   query = qstring(params...)
-  uri = string(baseuri, "candles", query)
+  uri = string(baseuri, resource, query)
   # println(uri)
   res = get(uri, headers = defheaders)
   if res.status != 200
@@ -49,9 +49,7 @@ function oa_series(inst::Symbol, gran::Symbol, from::DateTime, to::DateTime)
     values[i,8] = c["lowAsk"]
   end
 
-  candles = TimeArray(timestamps, values, colnames)
-  save_candles(candles)
-  candles
+  TimeArray(timestamps, values, colnames)
 end
 
 roundup(f::Float64) = floor(f) < f ? floor(f + 1) : floor(f)
@@ -85,5 +83,7 @@ function oa_candles(inst::Symbol, gran::Symbol, from::DateTime, to::DateTime)
     end
   end
 
-  Candles(inst, gran, series)
+  candles = Candles(inst, gran, series)
+  save_candles(candles)
+  candles
 end
