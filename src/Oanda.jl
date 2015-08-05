@@ -9,6 +9,7 @@ using Base.Dates: toms
 
 export past,
        last,
+       playback,
        save_candles,
        db_candles,
        qstring,
@@ -19,7 +20,6 @@ include("util.jl")
 include("fxcommon.jl")
 include("qstring.jl")
 include("client.jl")
-include("db.jl")
 include("candles.jl")
 
 end # module Oanda

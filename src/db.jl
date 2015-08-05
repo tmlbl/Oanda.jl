@@ -21,6 +21,19 @@ function unpack_candle(data::Array{Uint8})
   Candle(parsedfields...)
 end
 
+function playback(itr::Function, inst::Symbol, gran::Symbol, from::DateTime, to::DateTime)
+  r = db_range(db, join(map(string,[inst, gran, from]), '|'))
+  for c in r
+    t = DateTime(split(c[1], '|')[3])
+    if t <= to
+      fields = split(bytestring(c[2]), '|')
+      itr(map(parse, fields))
+    else
+      break
+    end
+  end
+end
+
 function db_candles(instrument::Symbol, granularity::Symbol, from::DateTime, to::DateTime)
   from = round(from)
   r = db_range(db, join(map(string,[instrument, granularity, from]), '|'))

@@ -1,6 +1,8 @@
 using Requests,
       HttpCommon
 
+include("db.jl")
+
 const baseuri = "http://api-sandbox.oanda.com/v1/"
 const defheaders = Dict{String,String}("X-Accept-Datetime-Format" => "UNIX")
 
@@ -47,7 +49,9 @@ function oa_series(inst::Symbol, gran::Symbol, from::DateTime, to::DateTime)
     values[i,8] = c["lowAsk"]
   end
 
-  TimeArray(timestamps, values, colnames)
+  candles = TimeArray(timestamps, values, colnames)
+  save_candles(candles)
+  candles
 end
 
 roundup(f::Float64) = floor(f) < f ? floor(f + 1) : floor(f)
