@@ -1,7 +1,6 @@
 module Oanda
 
-using Requests,
-      TimeSeries,
+using TimeSeries,
       Base.Dates,
       JSON
 
@@ -10,6 +9,10 @@ using Base.Dates: toms
 export past,
        last,
        playback,
+       Candle,
+       CandleIterator,
+       Granularity,
+       Instrument,
        save_candles,
        db_candles,
        qstring,
@@ -21,5 +24,6 @@ include("fxcommon.jl")
 include("qstring.jl")
 include("client.jl")
 include("candles.jl")
+include("playback.jl")
 
 end # module Oanda

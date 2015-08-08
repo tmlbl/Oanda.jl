@@ -1,9 +1,9 @@
 # Uses LevelDB to create a cache of candle data for analysis
 # and backtesting
 
-using LevelDB
+using LevelDB, Base.Dates
 
-db = open_db(joinpath(ENV["HOME"], ".oanda"), true)
+global db = open_db(joinpath(ENV["HOME"], ".oanda"), true)
 
 function save_candles(candles::Candles)
   batch = create_write_batch()
@@ -19,26 +19,6 @@ function unpack_candle(data::Array{Uint8})
   fields = split(bytestring(data), '|')
   parsedfields = map(parse, fields)
   Candle(parsedfields...)
-end
-
-function playback(itr::Function, inst::Symbol, gran::Symbol, from::DateTime, to::DateTime)
-  r = db_range(db, join(map(string,[inst, gran, from]), '|'))
-  colnames = ASCIIString["openBid", "openAsk", "closeBid", "closeAsk",
-    "highBid", "highAsk", "lowBid", "lowAsk"]
-  for c in r
-    dict = Dict{ASCIIString,Float64}()
-    keyparts = split(c[1], '|')
-    t = DateTime(keyparts[3])
-    if t <= to && keyparts[2] == string(gran)
-      fields = split(bytestring(c[2]), '|')
-      for i = 1:length(colnames)
-        dict[colnames[i]] = parse(fields[i])
-      end
-      itr(dict)
-    else
-      break
-    end
-  end
 end
 
 function db_candles(instrument::Symbol, granularity::Symbol, from::DateTime, to::DateTime)

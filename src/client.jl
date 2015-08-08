@@ -1,10 +1,10 @@
-using Requests,
+using HTTPClient,
       HttpCommon
 
 include("db.jl")
 
 const baseuri = "http://api-sandbox.oanda.com/v1/"
-const defheaders = Dict{String,String}("X-Accept-Datetime-Format" => "UNIX")
+const defheaders = [("X-Accept-Datetime-Format", "UNIX")]
 
 function oa_err(res::Response)
   print_with_color(:red, res.data)
@@ -15,7 +15,7 @@ function oa_request(resource::String, params::Tuple{String,Any}...)
   uri = string(baseuri, resource, query)
   # println(uri)
   res = get(uri, headers = defheaders)
-  if res.status != 200
+  if res.http_code != 200
     oa_err(res)
   end
   res
@@ -26,7 +26,7 @@ function oa_series(inst::Symbol, gran::Symbol, from::DateTime, to::DateTime)
   res = oa_request("candles", ("start", from), ("end", to),
     ("instrument", inst), ("granularity", gran))
 
-  candle_data = JSON.parse(res.data)["candles"]
+  candle_data = JSON.parse(bytestring(res.body))["candles"]
 
   timestamps = Array{DateTime,1}(length(candle_data))
   colnames = ASCIIString["openBid", "openAsk", "closeBid", "closeAsk",
@@ -52,7 +52,7 @@ function oa_series(inst::Symbol, gran::Symbol, from::DateTime, to::DateTime)
   TimeArray(timestamps, values, colnames)
 end
 
-roundup(f::Float64) = floor(f) < f ? floor(f + 1) : floor(f)
+roundup(f::Float64) = Int(floor(f) < f ? floor(f + 1) : floor(f))
 
 function combine(t1::TimeArray, t2::TimeArray)
   values = vcat(t1.values, t2.values)
@@ -60,11 +60,15 @@ function combine(t1::TimeArray, t2::TimeArray)
   TimeArray(timestamps, values, t1.colnames)
 end
 
+function num_candles(gran::Granularity, from::DateTime, to::DateTime)
+
+end
+
 function oa_candles(inst::Symbol, gran::Symbol, from::DateTime, to::DateTime)
-  g = granularities[gran]
-  to = round(to)
-  from = round(from)
-  numcandles = Int(to - from) / toms(g)
+  g = Granularity(gran)
+  # to = round(to)
+  # from = round(from)
+  numcandles = Int(to - from) / toms(g.period)
   println("There should be $numcandles $gran candles from $from to $to")
   # If there are more than 5000 we need to request them in batches
   reqs = roundup(numcandles / 5000)
@@ -76,10 +80,10 @@ function oa_candles(inst::Symbol, gran::Symbol, from::DateTime, to::DateTime)
     interval = (to - from) / reqs
     println("interval $interval g $g")
     series = oa_series(inst, gran, from, from + interval)
-    cur_time = from + interval + g
+    cur_time = from + interval + g.period
     for i = 2:reqs
       series = combine(series, oa_series(inst, gran, cur_time, cur_time + interval))
-      cur_time += interval + g
+      cur_time += interval + g.period
     end
   end
 

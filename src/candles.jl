@@ -1,42 +1,27 @@
-const GAP_TOLERANCE = 3 # Candles
-
-# Finds significant gaps in candle data and returns them as tuples of datetimes
+# Simple validation. If start and end times are covered by the
+# data set, we call it good.
 function validate(cans::Candles, from::DateTime, to::DateTime)
-  println("Validating candles from $from to $to")
-  ret = Tuple[]
+  valid = true
   g = granularities[cans.granularity]
-
-  cur = first(cans.series.timestamp)
-  for c in [from; cans.series.timestamp[2:end]; to]
-    gap = c - cur
-    if gap > Millisecond(g)
-      gap_width = Int(floor(Int(gap) / Int(Millisecond(g))))
-      if gap_width > GAP_TOLERANCE
-        println("Gap detected: $gap_width candles")
-        push!(ret, (cur, c))
-      end
-    end
-    cur = c
+  if !(first(cans.series.timestamp) <= (from + g))
+    valid = false
   end
-  ret
+  if !(last(cans.series.timestamp) >= (to - g))
+    valid = false
+  end
+  valid
 end
 
 function candles(inst::Symbol, gran::Symbol, from::DateTime,  to::DateTime)
-  # Estimate the candles that should exist
   g = granularities[gran]
-  println("Interval is $g")
-  numcandles = Int(floor((to - from) / Millisecond(g)))
-  println("There should be $numcandles $gran candles from $from to $to")
+  # Try to get candles from the database first
   cans = db_candles(inst, gran, from, to)
-  # If the number in the db does not match the target, figure out what is missing
-  # Apparently it is not uncommon to see many gaps of 1 or 2 candles, so this
-  # number does not line up for minute-by-minute data at least
-  println("Got $(length(cans.series)) candles from db")
+  # See what we got and if we have to fetch
   if length(cans.series) < 1
     cans = oa_candles(inst, gran, from, to)
-  elseif length(cans.series) < numcandles
-    gaps = validate(cans, from, to)
-    if length(gaps) > 0
+  else
+    valid = validate(cans, from, to)
+    if !valid
       cans = oa_candles(inst, gran, from, to)
     end
   end
