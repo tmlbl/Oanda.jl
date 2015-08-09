@@ -1,7 +1,7 @@
 
 immutable CandleIterator
   inst::Instrument
-  gran::Symbol
+  gran::Granularity
   start_time::DateTime
   end_time::DateTime
   range::LevelDB.Range
@@ -10,8 +10,9 @@ end
 CandleIterator(inst::Symbol, gran::Symbol,
   start_time::DateTime, end_time::DateTime) = begin
 
-  r = db_range(db, join(map(string,[inst, gran, from]), '|'))
-  CandleIterator(instruments[inst], gran, start_time, end_time, r)
+  cur_str = join(map(string,[inst, gran, start_time]), '|')
+  r = db_range(db, cur_str)
+  CandleIterator(Instrument(inst), Granularity(gran), start_time, end_time, r)
 end
 
 Base.start(ci::CandleIterator) = begin
@@ -28,8 +29,9 @@ Base.next(ci::CandleIterator, state) = begin
   c = next(ci.range)
   keyparts = split(c[1][1], '|')
   fields = split(bytestring(c[1][2]), '|')
-
-  Candle(map(float, fields)...), (string(keyparts[3]) >= string(ci.end_time))
+  isdone = (string(keyparts[3]) >= string(ci.end_time)) ||
+    ci.gran.string != keyparts[2]
+  Candle(map(float, fields)...), isdone
 end
 
 function playback(inst::Symbol, gran::Symbol, from::DateTime, to::DateTime)

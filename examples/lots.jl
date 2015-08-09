@@ -7,7 +7,7 @@ const end_time = DateTime("2015-07-24T21:28:00")
 const DOJI_SIZE = 0.1 # Price difference pip threshold
 # For H1 candles we consider candles with an open / close difference of 0 pips
 const SYMBOL = :EUR_USD
-const GRAN = :S5
+const GRAN = :H1
 
 # Fetch / validate the historical data
 # Run this once then comment out for faster iteration
