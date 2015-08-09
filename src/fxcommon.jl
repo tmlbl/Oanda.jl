@@ -66,6 +66,7 @@ type Candles
 end
 
 type Candle
+  time::DateTime
   openBid::Float64
   openAsk::Float64
   closeBid::Float64

@@ -29,9 +29,9 @@ Base.next(ci::CandleIterator, state) = begin
   c = next(ci.range)
   keyparts = split(c[1][1], '|')
   fields = split(bytestring(c[1][2]), '|')
-  isdone = (string(keyparts[3]) >= string(ci.end_time)) ||
-    ci.gran.string != keyparts[2]
-  Candle(map(float, fields)...), isdone
+  dstring = string(keyparts[3])
+  isdone = dstring >= string(ci.end_time) || ci.gran.string != keyparts[2]
+  Candle(DateTime(dstring), map(float, fields)...), isdone
 end
 
 function playback(inst::Symbol, gran::Symbol, from::DateTime, to::DateTime)
