@@ -3,6 +3,16 @@ using HTTPClient,
 
 include("db.jl")
 
+const baseuris = Dict{String,String}(
+  "sandbox" => "http://api-sandbox.oanda.com/v1/",
+  "practice" => "https://api-fxpractice.oanda.com",
+  "live" => "https://api-fxtrade.oanda.com"
+)
+
+type OandaClient
+  token::String
+end
+
 const baseuri = "http://api-sandbox.oanda.com/v1/"
 const defheaders = [("X-Accept-Datetime-Format", "UNIX")]
 
@@ -61,14 +71,12 @@ function combine(t1::TimeArray, t2::TimeArray)
 end
 
 function num_candles(gran::Granularity, from::DateTime, to::DateTime)
-
+  Int64(floor(Int64(to - from) / toms(gran.period)))
 end
 
 function oa_candles(inst::Symbol, gran::Symbol, from::DateTime, to::DateTime)
   g = Granularity(gran)
-  # to = round(to)
-  # from = round(from)
-  numcandles = Int(to - from) / toms(g.period)
+  numcandles = num_candles(g, from, to)
   println("There should be $numcandles $gran candles from $from to $to")
   # If there are more than 5000 we need to request them in batches
   reqs = roundup(numcandles / 5000)

@@ -4,7 +4,7 @@ using Oanda
 # When we see a "doji", as defined by our parameters, we will place
 # a trade in the opposite direction of momentum
 
-const start_time = DateTime("2015-06-27T00:00:00")
+const start_time = DateTime("2015-04-27T00:00:00")
 const end_time = DateTime("2015-07-28T00:00:00")
 const DOJI_SIZE = 0.1 # Price difference pip threshold
 # For H1 candles we consider candles with an open / close difference of 0 pips
@@ -17,6 +17,7 @@ c = candles(SYMBOL, GRAN, start_time, end_time)
 
 # Play the data back
 ctr = 0
+dojis = 0
 
 for c in playback(SYMBOL, GRAN, start_time, end_time)
   # Ask and bid price differences
@@ -30,8 +31,14 @@ for c in playback(SYMBOL, GRAN, start_time, end_time)
     end
   end
   println(c.time)
+  ctr += 1
   if isdoji
+    dojis += 1
     print("Doji: ")
+    hist = db_candles(SYMBOL, GRAN, c.time - Hour(8), c.time)
     @show c
+    @show hist
   end
 end
+
+println("Stepped through $ctr candles finding $dojis dojis")

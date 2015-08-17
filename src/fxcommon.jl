@@ -1,4 +1,4 @@
-granularities = Dict{Symbol,Union(TimePeriod,DatePeriod)}(
+granularities = Dict{Symbol,Period}(
 
   :S5 => Second(5),
   :S10 => Second(10),
@@ -31,7 +31,7 @@ granularities = Dict{Symbol,Union(TimePeriod,DatePeriod)}(
 type Granularity
   symbol::Symbol
   string::ASCIIString
-  period::Union(TimePeriod,DatePeriod)
+  period::Period
 end
 
 Granularity(s::Symbol) = Granularity(s, ascii(string(s)), granularities[s])
