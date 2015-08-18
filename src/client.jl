@@ -1,39 +1,93 @@
 using HTTPClient,
       HttpCommon
 
+using HTTPClient.HTTPC
+
 include("db.jl")
 
 const baseuris = Dict{String,String}(
-  "sandbox" => "http://api-sandbox.oanda.com/v1/",
+  "sandbox" => "http://api-sandbox.oanda.com",
   "practice" => "https://api-fxpractice.oanda.com",
   "live" => "https://api-fxtrade.oanda.com"
 )
 
 type OandaClient
   token::String
+  env::String
+  uri::String
 end
 
-const baseuri = "http://api-sandbox.oanda.com/v1/"
-const defheaders = [("X-Accept-Datetime-Format", "UNIX")]
+OandaClient(token, env) = OandaClient(token, env, baseuris[env])
 
-function oa_err(res::Response)
-  print_with_color(:red, res.data)
+function headers(oa::OandaClient)
+  return [("Authorization", "Bearer $(oa.token)"),
+    ("X-Accept-Datetime-Format", "UNIX"),
+    ("Content-Type", "application/x-www-form-urlencoded")]
 end
 
-function oa_request(resource::String, params::Tuple{String,Any}...)
+getBaseUri(oa::OandaClient) = baseuris[oa.env]
+
+function oa_err(res::HTTPClient.HTTPC.Response)
+  error(JSON.parse(bytestring(res.body))["message"])
+end
+
+function oa_request(oa::OandaClient, resource::String, params::Tuple{String,Any}...; verb="GET")
   query = qstring(params...)
-  uri = string(baseuri, resource, query)
-  # println(uri)
-  res = get(uri, headers = defheaders)
+  uri = string(oa.uri, resource, query)
+  println(uri)
+  opts = RequestOptions(headers = headers(oa))
+  res = HTTPC.custom(uri, verb, opts)
   if res.http_code != 200
     oa_err(res)
   end
   res
 end
 
+function oa_post(oa::OandaClient, resource::String, params::Tuple{String,Any}...)
+  query = replace(qstring(params...), '?', "")
+  uri = string(oa.uri, resource)
+  println("POST $query $uri")
+  res = post(uri, query, headers = headers(oa))
+  if res.http_code != 200
+    oa_err(res)
+  end
+  res
+end
+
+type OandaAccount
+  id::Int64
+  name::String
+  currency::String
+  marginRate::Float64
+end
+
+function oa_accounts(oa::OandaClient)
+  res = oa_request(oa, "/v1/accounts")
+  map(JSON.parse(bytestring(res.body))["accounts"]) do acct
+    OandaAccount(
+      acct["accountId"],
+      acct["accountName"],
+      acct["accountCurrency"],
+      acct["marginRate"]
+    )
+  end
+end
+
+function oa_orders(oa::OandaClient, acct::OandaAccount)
+  res = oa_request(oa, "/v1/accounts/$(acct.id)/orders")
+  JSON.parse(bytestring(res.body))["orders"]
+end
+
+function oa_market_buy(oa::OandaClient, acct::OandaAccount, inst::Symbol, units::Int64)
+  res = oa_post(oa, "/v1/accounts/$(acct.id)/orders",
+    ("instrument", inst), ("units", units), ("side", "buy"),
+    ("type", "market"))
+  JSON.parse(bytestring(res.body))
+end
+
 function oa_series(inst::Symbol, gran::Symbol, from::DateTime, to::DateTime)
   println("Requesting candles from $from to $to")
-  res = oa_request("candles", ("start", from), ("end", to),
+  res = oa_request("/v1/candles", ("start", from), ("end", to),
     ("instrument", inst), ("granularity", gran))
 
   candle_data = JSON.parse(bytestring(res.body))["candles"]

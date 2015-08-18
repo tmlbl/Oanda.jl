@@ -18,6 +18,9 @@ export past,
        db_candles,
        qstring,
        oa_candles,
+       oa_request,
+       oa_accounts,
+       oa_orders,
        candles
 
 include("util.jl")
