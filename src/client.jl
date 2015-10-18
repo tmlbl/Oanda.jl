@@ -1,20 +1,18 @@
-using HTTPClient,
-      HttpCommon
-
-using HTTPClient.HTTPC
+using HttpCommon
+using HTTPClient: HTTPC
 
 include("db.jl")
 
-const baseuris = Dict{String,String}(
+const baseuris = Dict{AbstractString,AbstractString}(
   "sandbox" => "http://api-sandbox.oanda.com",
   "practice" => "https://api-fxpractice.oanda.com",
   "live" => "https://api-fxtrade.oanda.com"
 )
 
 type OandaClient
-  token::String
-  env::String
-  uri::String
+  token::AbstractString
+  env::AbstractString
+  uri::AbstractString
 end
 
 OandaClient(token, env) = OandaClient(token, env, baseuris[env])
@@ -27,11 +25,11 @@ end
 
 getBaseUri(oa::OandaClient) = baseuris[oa.env]
 
-function oa_err(res::HTTPClient.HTTPC.Response)
+function oa_err(res::HTTPC.Response)
   error(JSON.parse(bytestring(res.body))["message"])
 end
 
-function oa_request(oa::OandaClient, resource::String, params::Tuple{String,Any}...; verb="GET")
+function oa_request(oa::OandaClient, resource::AbstractString, params::Tuple{AbstractString,Any}...; verb="GET")
   query = qstring(params...)
   uri = string(oa.uri, resource, query)
   println(uri)
@@ -43,7 +41,7 @@ function oa_request(oa::OandaClient, resource::String, params::Tuple{String,Any}
   res
 end
 
-function oa_post(oa::OandaClient, resource::String, params::Tuple{String,Any}...)
+function oa_post(oa::OandaClient, resource::AbstractString, params::Tuple{AbstractString,Any}...)
   query = replace(qstring(params...), '?', "")
   uri = string(oa.uri, resource)
   println("POST $query $uri")
@@ -56,8 +54,8 @@ end
 
 type OandaAccount
   id::Int64
-  name::String
-  currency::String
+  name::AbstractString
+  currency::AbstractString
   marginRate::Float64
 end
 
@@ -85,9 +83,9 @@ function oa_market_buy(oa::OandaClient, acct::OandaAccount, inst::Symbol, units:
   JSON.parse(bytestring(res.body))
 end
 
-function oa_series(inst::Symbol, gran::Symbol, from::DateTime, to::DateTime)
+function oa_series(oa::OandaClient, inst::Symbol, gran::Symbol, from::DateTime, to::DateTime)
   println("Requesting candles from $from to $to")
-  res = oa_request("/v1/candles", ("start", from), ("end", to),
+  res = oa_request(oa, "/v1/candles", ("start", from), ("end", to),
     ("instrument", inst), ("granularity", gran))
 
   candle_data = JSON.parse(bytestring(res.body))["candles"]
@@ -128,7 +126,7 @@ function num_candles(gran::Granularity, from::DateTime, to::DateTime)
   Int64(floor(Int64(to - from) / toms(gran.period)))
 end
 
-function oa_candles(inst::Symbol, gran::Symbol, from::DateTime, to::DateTime)
+function oa_candles(oa::OandaClient, inst::Symbol, gran::Symbol, from::DateTime, to::DateTime)
   g = Granularity(gran)
   numcandles = num_candles(g, from, to)
   println("There should be $numcandles $gran candles from $from to $to")
@@ -137,14 +135,14 @@ function oa_candles(inst::Symbol, gran::Symbol, from::DateTime, to::DateTime)
   println("We need to make $reqs request(s)")
 
   if reqs == 1
-    series = oa_series(inst, gran, from, to)
+    series = oa_series(oa, inst, gran, from, to)
   else
     interval = (to - from) / reqs
     println("interval $interval g $g")
-    series = oa_series(inst, gran, from, from + interval)
+    series = oa_series(oa, inst, gran, from, from + interval)
     cur_time = from + interval + g.period
     for i = 2:reqs
-      series = combine(series, oa_series(inst, gran, cur_time, cur_time + interval))
+      series = combine(series, oa_series(oa, inst, gran, cur_time, cur_time + interval))
       cur_time += interval + g.period
     end
   end

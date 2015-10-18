@@ -1,9 +1,9 @@
-using HttpCommon, Base.Dates
+using HttpCommon, Base.Dates, URIParser
 
 # Creating a query string that will encode unix datetimes
 # given Julia DateTimes
 function qstring(kv::Tuple...)
-  encodeval(v::String) = encodeURI(v)
+  encodeval(v::AbstractString) = escape(v)
   encodeval(n::Real) = string(n)
   encodeval(s::Symbol) = encodeval(string(s))
   encodeval(dt::DateTime) = string(round(Int64, Dates.datetime2unix(dt)))

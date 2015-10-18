@@ -33,7 +33,8 @@ facts("Estimates how many candles to get") do
 end
 
 # Fetch some historical data
-c = oa_candles(inst, gran, start_time, end_time)
+oa = OandaClient("", "sandbox")
+c = oa_candles(oa, inst, gran, start_time, end_time)
 @show c
 
 facts("Saves candles to the database") do
