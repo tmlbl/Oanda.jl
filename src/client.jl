@@ -13,9 +13,18 @@ type OandaClient
   token::AbstractString
   env::AbstractString
   uri::AbstractString
+
+  function OandaClient(token, env, uri)
+    global oa = new(token, env, uri)
+    oa
+  end
 end
 
 OandaClient(token, env) = OandaClient(token, env, baseuris[env])
+
+# Default sandbox client. For easier function calls we assume one client per
+# Julia process.
+oa = OandaClient("", "sandbox")
 
 function headers(oa::OandaClient)
   return [("Authorization", "Bearer $(oa.token)"),
@@ -23,13 +32,11 @@ function headers(oa::OandaClient)
     ("Content-Type", "application/x-www-form-urlencoded")]
 end
 
-getBaseUri(oa::OandaClient) = baseuris[oa.env]
-
 function oa_err(res::HTTPC.Response)
   error(JSON.parse(bytestring(res.body))["message"])
 end
 
-function oa_request(oa::OandaClient, resource::AbstractString, params::Tuple{AbstractString,Any}...; verb="GET")
+function oa_request(resource::AbstractString, params::Tuple{AbstractString,Any}...; verb="GET")
   query = qstring(params...)
   uri = string(oa.uri, resource, query)
   println(uri)
@@ -41,7 +48,7 @@ function oa_request(oa::OandaClient, resource::AbstractString, params::Tuple{Abs
   res
 end
 
-function oa_post(oa::OandaClient, resource::AbstractString, params::Tuple{AbstractString,Any}...)
+function oa_post(resource::AbstractString, params::Tuple{AbstractString,Any}...)
   query = replace(qstring(params...), '?', "")
   uri = string(oa.uri, resource)
   println("POST $query $uri")
@@ -59,8 +66,8 @@ type OandaAccount
   marginRate::Float64
 end
 
-function oa_accounts(oa::OandaClient)
-  res = oa_request(oa, "/v1/accounts")
+function oa_accounts()
+  res = oa_request("/v1/accounts")
   map(JSON.parse(bytestring(res.body))["accounts"]) do acct
     OandaAccount(
       acct["accountId"],
@@ -71,21 +78,21 @@ function oa_accounts(oa::OandaClient)
   end
 end
 
-function oa_orders(oa::OandaClient, acct::OandaAccount)
-  res = oa_request(oa, "/v1/accounts/$(acct.id)/orders")
+function oa_orders(acct::OandaAccount)
+  res = oa_request("/v1/accounts/$(acct.id)/orders")
   JSON.parse(bytestring(res.body))["orders"]
 end
 
-function oa_market_buy(oa::OandaClient, acct::OandaAccount, inst::Symbol, units::Int64)
-  res = oa_post(oa, "/v1/accounts/$(acct.id)/orders",
+function oa_market_buy(acct::OandaAccount, inst::Symbol, units::Int64)
+  res = oa_post("/v1/accounts/$(acct.id)/orders",
     ("instrument", inst), ("units", units), ("side", "buy"),
     ("type", "market"))
   JSON.parse(bytestring(res.body))
 end
 
-function oa_series(oa::OandaClient, inst::Symbol, gran::Symbol, from::DateTime, to::DateTime)
+function oa_series(inst::Symbol, gran::Symbol, from::DateTime, to::DateTime)
   println("Requesting candles from $from to $to")
-  res = oa_request(oa, "/v1/candles", ("start", from), ("end", to),
+  res = oa_request("/v1/candles", ("start", from), ("end", to),
     ("instrument", inst), ("granularity", gran))
 
   candle_data = JSON.parse(bytestring(res.body))["candles"]
@@ -126,7 +133,7 @@ function num_candles(gran::Granularity, from::DateTime, to::DateTime)
   Int64(floor(Int64(to - from) / toms(gran.period)))
 end
 
-function oa_candles(oa::OandaClient, inst::Symbol, gran::Symbol, from::DateTime, to::DateTime)
+function oa_candles(inst::Symbol, gran::Symbol, from::DateTime, to::DateTime)
   g = Granularity(gran)
   numcandles = num_candles(g, from, to)
   println("There should be $numcandles $gran candles from $from to $to")
@@ -135,14 +142,14 @@ function oa_candles(oa::OandaClient, inst::Symbol, gran::Symbol, from::DateTime,
   println("We need to make $reqs request(s)")
 
   if reqs == 1
-    series = oa_series(oa, inst, gran, from, to)
+    series = oa_series(inst, gran, from, to)
   else
     interval = (to - from) / reqs
     println("interval $interval g $g")
-    series = oa_series(oa, inst, gran, from, from + interval)
+    series = oa_series(inst, gran, from, from + interval)
     cur_time = from + interval + g.period
     for i = 2:reqs
-      series = combine(series, oa_series(oa, inst, gran, cur_time, cur_time + interval))
+      series = combine(series, oa_series(inst, gran, cur_time, cur_time + interval))
       cur_time += interval + g.period
     end
   end
