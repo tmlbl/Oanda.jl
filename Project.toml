@@ -1,0 +1,10 @@
+name = "Oanda"
+uuid = "decf672c-62da-4670-89ba-48c3b9e013b7"
+authors = ["Tim Lebel <tlebel@ciq.co>"]
+version = "0.1.0"
+
+[deps]
+HTTP = "cd3eb016-35fb-5094-929b-558a96fad6f3"
+JSON = "682c06a0-de6a-54ab-a142-c8b1cf79cde6"
+URIs = "5c2747f8-b7ea-4ff2-ba2e-563bfd36b1d4"
+Unmarshal = "cbff2730-442d-58d7-89d1-8e530c41eb02"
